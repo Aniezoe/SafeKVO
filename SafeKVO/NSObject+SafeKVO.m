@@ -9,6 +9,10 @@
 #import <objc/runtime.h>
 #import <objc/message.h>
 
+#if TARGET_OS_IPHONE
+#import <UIKit/UIKit.h>
+#endif
+
 @interface SafeKVOModel : NSObject
 
 @property (nonatomic, weak) NSObject *observer;// 观察者
@@ -54,37 +58,6 @@ static forceInline NSString *sk_propertyNameFromSetterString(NSString *setterStr
     return propertyName;
 }
 
-static forceInline void sk_setter(id self, SEL _cmd, id newValue) {
-    @synchronized (self) {
-        NSString *propertyName = sk_propertyNameFromSetterString(NSStringFromSelector(_cmd));
-        NSParameterAssert(propertyName);
-        if (!propertyName)
-            return;
-        
-        NSMutableArray *observers = objc_getAssociatedObject(self, (__bridge const void *)kSafeKVOAssiociateObservers);
-        for (SafeKVOModel *model in observers) {
-            if ([model.keyPath containsString:propertyName])
-                model.oldValue = [model.observed valueForKeyPath:model.keyPath];
-        }
-        // 调用父类的set方法
-        struct objc_super superClass = {
-            .receiver = self,
-            .super_class = class_getSuperclass(object_getClass(self))
-        };
-        void (*superSetter)(void *, SEL, id) = (void *)objc_msgSendSuper;
-        superSetter(&superClass, _cmd, newValue);
-        
-        // 观察者回调
-        for (SafeKVOModel *model in observers) {
-            // 观察者未释放才需回调
-            if ([model.keyPath containsString:propertyName] && model.observer) {
-                model.change(model.observed, model.keyPath, model.oldValue, [model.observed valueForKeyPath:model.keyPath]);
-                model.oldValue = nil;
-            }
-        }
-    }
-}
-
 static forceInline Class sk_class(id self) {
     return class_getSuperclass(object_getClass(self));
 }
@@ -128,6 +101,301 @@ static forceInline BOOL objectHasSelector(id object, SEL selector) {
     return result;
 }
 
+static forceInline void __SKPrivateSetter(id self, SEL _cmd, void (^setValueImp)(IMP imp)) {
+    @synchronized (self) {
+        NSString *propertyName = sk_propertyNameFromSetterString(NSStringFromSelector(_cmd));
+        NSParameterAssert(propertyName);
+        if (!propertyName)
+            return;
+        
+        NSMutableArray *observers = objc_getAssociatedObject(self, (__bridge const void *)kSafeKVOAssiociateObservers);
+        for (SafeKVOModel *model in observers) {
+            if ([model.keyPath containsString:propertyName])
+                model.oldValue = [model.observed valueForKeyPath:model.keyPath];
+        }
+        
+        setValueImp(objc_msgSendSuper);
+        
+        // 观察者回调
+        for (SafeKVOModel *model in observers) {
+            // 观察者未释放才需回调
+            if ([model.keyPath containsString:propertyName] && model.observer) {
+                model.change(model.observed, model.keyPath, model.oldValue, [model.observed valueForKeyPath:model.keyPath]);
+                model.oldValue = nil;
+            }
+        }
+    }
+}
+ 
+static forceInline void SKSetter_id(id self, SEL _cmd, id value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, id))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline void SKSetter_BOOL(id self, SEL _cmd, BOOL value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, BOOL))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline void SKSetter_double(id self, SEL _cmd, double value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, double))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline void SKSetter_float(id self, SEL _cmd, float value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, float))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline void SKSetter_char(id self, SEL _cmd, char value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, char))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline void SKSetter_int(id self, SEL _cmd, int value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, int))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline void SKSetter_long(id self, SEL _cmd, long value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, long))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline void SKSetter_longlong(id self, SEL _cmd, long long value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, long long))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline void SKSetter_short(id self, SEL _cmd, short value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, short))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline void SKSetter_unsignedchar(id self, SEL _cmd, unsigned char value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, unsigned char))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline void SKSetter_unsignedint(id self, SEL _cmd, unsigned int value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, unsigned int))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline void SKSetter_unsignedlong(id self, SEL _cmd, unsigned long value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, unsigned long))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline void SKSetter_unsignedlonglong(id self, SEL _cmd, unsigned long long value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, unsigned long long))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline void SKSetter_unsignedshort(id self, SEL _cmd, unsigned short value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, unsigned short))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline void SKSetter_CGPoint(id self, SEL _cmd, CGPoint value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, CGPoint))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline void SKSetter_NSRange(id self, SEL _cmd, NSRange value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, NSRange))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline void SKSetter_CGRect(id self, SEL _cmd, CGRect value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, CGRect))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline void SKSetter_CGSize(id self, SEL _cmd, CGSize value) {
+    __SKPrivateSetter(self, _cmd, ^(IMP imp) {
+        struct objc_super superClass = {
+            .receiver = self,
+            .super_class = class_getSuperclass(object_getClass(self))
+        };
+        ((void (*)(void *, SEL, CGSize))imp)(&superClass, _cmd, value);
+    });
+}
+
+static forceInline IMP __SKSetter(Method setMethod) {
+    if (!setMethod) {
+        return NULL;
+    }
+    
+    IMP imp = NULL;
+    const char *encoding = method_getTypeEncoding(setMethod);
+    if (*encoding == 'v') {
+        char *argType = method_copyArgumentType(setMethod, 2);
+        switch (*argType) {
+            case 'c': {
+                imp = (IMP)SKSetter_char;
+            } break;
+            case 'd': {
+                imp = (IMP)SKSetter_double;
+            } break;
+            case 'f': {
+                imp = (IMP)SKSetter_float;
+            } break;
+            case 'i': {
+                imp = (IMP)SKSetter_int;
+            } break;
+            case 'l': {
+                imp = (IMP)SKSetter_long;
+            } break;
+            case 'q': {
+                imp = (IMP)SKSetter_longlong;
+            } break;
+            case 's': {
+                imp = (IMP)SKSetter_short;
+            } break;
+            case 'S': {
+                imp = (IMP)SKSetter_unsignedshort;
+            } break;
+            case 'B': {
+                imp = (IMP)SKSetter_BOOL;
+            } break;
+            case 'C': {
+                imp = (IMP)SKSetter_unsignedchar;
+            } break;
+            case 'I': {
+                imp = (IMP)SKSetter_unsignedint;
+            } break;
+            case 'L': {
+                imp = (IMP)SKSetter_unsignedlong;
+            } break;
+            case 'Q': {
+                imp = (IMP)SKSetter_unsignedlonglong;
+            } break;
+            case '#':
+            case '@':{
+                imp = (IMP)SKSetter_id;
+            } break;
+            case '{': {
+                if(strcmp(argType, @encode(CGPoint)) ==0) {
+                    imp = (IMP)SKSetter_CGPoint;
+                }
+#if TARGET_OS_OSX
+                else if (strcmp(argType, @encode(NSPoint)) == 0) {
+                    imp = (IMP)SKSetter_CGPoint;
+                }
+#endif
+                else if (strcmp (argType, @encode(NSRange)) == 0) {
+                    imp = (IMP)SKSetter_NSRange;
+                }
+                else if (strcmp(argType,@encode(CGRect)) == 0) {
+                    imp = (IMP)SKSetter_CGRect;
+                }
+#if TARGET_OS_OSX
+                else if (strcmp(argType,@encode(NSRect)) == 0) {
+                    imp = (IMP)SKSetter_CGRect;
+                }
+#endif
+                else if(strcmp(argType, @encode(CGSize)) == 0) {
+                    imp = (IMP)SKSetter_CGSize;
+                }
+#if TARGET_OS_OSX
+                else if (strcmp(argType, @encode(NSSize)) == 0) {
+                    imp = (IMP)SKSetter_CGSize;
+                }
+#endif
+            } break;
+            default: {
+            } break;
+        }
+    }
+    return imp;
+}
+
 @implementation NSObject (SafeKVO)
 
 - (void)sk_addObserver:(NSObject *)observer forKeyPath:(NSString *)keyPath observeValueChanged:(SK_ObservedValueChanged)change {
@@ -161,7 +429,9 @@ static forceInline BOOL objectHasSelector(id object, SEL selector) {
             if (!objectHasSelector(object, setterSelector)) {
                 // 重写set方法在方法里调用父类的set方法并通过block回调到上层，以完成监听过程
                 const char *types = method_getTypeEncoding(setterMethod);
-                class_addMethod(observedClass, setterSelector, (IMP)sk_setter, types);
+                IMP imp = __SKSetter(setterMethod);
+                NSParameterAssert(imp);
+                class_addMethod(observedClass, setterSelector, imp, types);
             }
             // 添加监听者到类的关联对象数组
             observers = objc_getAssociatedObject(object, (__bridge void *)kSafeKVOAssiociateObservers);
