@@ -392,6 +392,7 @@ static forceInline IMP __SKSetter(Method setMethod) {
             default: {
             } break;
         }
+        free(argType);
     }
     return imp;
 }
